@@ -51,10 +51,12 @@ src-tauri/
 
 ## Screenshots
 
-![Screenshot 1](screenshots/1.png)
-![Screenshot 2](screenshots/2.png)
-![Screenshot 3](screenshots/3.png)
+<div align='center'>
+    <img src='screenshots\1.png'>
+    <img src='screenshots\2.png'>
+    <img src='screenshots\3.png'>
 
+</div>
 ## Key Features
 
 - Runs in the system tray with quick access menu
