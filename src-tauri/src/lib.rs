@@ -237,11 +237,10 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let mut tray_builder = TrayIconBuilder::with_id("main-tray")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id().as_ref() {
-            "show-hide" => {
+        .on_menu_event(|app, event| {
+            if event.id() == "show-hide" {
                 let _ = toggle_main_window(app);
-            }
-            "start-stop" => {
+            } else if event.id() == "start-stop" {
                 let app_handle = app.clone();
                 tauri::async_runtime::spawn(async move {
                     let shared = app_handle.state::<SharedState>().inner().clone();
@@ -255,11 +254,9 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                         set_error_and_stop(&app_handle, &app_handle.state::<SharedState>().inner().clone(), err);
                     }
                 });
-            }
-            "quit" => {
+            } else if event.id() == "quit" {
                 app.exit(0);
             }
-            _ => {}
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
