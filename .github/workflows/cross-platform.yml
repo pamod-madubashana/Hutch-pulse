@@ -1,0 +1,166 @@
+name: Cross Platform Release
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: contains(github.event.head_commit.message, 'new release')
+    runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          APP_VERSION=$(node -p "require('./admin/src-tauri/tauri.conf.json').version")
+          RELEASE_TAG="v${APP_VERSION}"
+
+          echo "app_version=$APP_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  build_admin:
+    needs: prepare
+    if: contains(github.event.head_commit.message, 'new release')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./admin/src-tauri -> target
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        working-directory: admin
+        shell: bash
+        run: npm install
+
+      - name: Install Tauri CLI
+        shell: bash
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri bundles
+        working-directory: admin
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        run: npm run tauri build
+
+      - name: Upload admin bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            admin/src-tauri/target/release/bundle/**/*.msi
+            admin/src-tauri/target/release/bundle/**/*.exe
+            admin/src-tauri/target/release/bundle/**/*.dmg
+            admin/src-tauri/target/release/bundle/**/*.app.tar.gz
+            admin/src-tauri/target/release/bundle/**/*.AppImage
+            admin/src-tauri/target/release/bundle/**/*.deb
+            admin/src-tauri/target/release/bundle/**/*.rpm
+
+  build_agent:
+    needs: prepare
+    if: contains(github.event.head_commit.message, 'new release')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            output: labscan-agent-windows-amd64.exe
+          - goos: windows
+            goarch: arm64
+            output: labscan-agent-windows-arm64.exe
+          - goos: linux
+            goarch: amd64
+            output: labscan-agent-linux-amd64
+          - goos: linux
+            goarch: arm64
+            output: labscan-agent-linux-arm64
+          - goos: darwin
+            goarch: amd64
+            output: labscan-agent-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            output: labscan-agent-darwin-arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
+          cache-dependency-path: agent/go.sum
+
+      - name: Build agent binary
+        working-directory: agent
+        shell: bash
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o "dist/${{ matrix.output }}" .
+
+      - name: Upload agent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: agent/dist/${{ matrix.output }}
+          if-no-files-found: error
+
+  release:
+    needs: [prepare, build_admin, build_agent]
+    if: contains(github.event.head_commit.message, 'new release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.release_tag }}
+          name: LabScan ${{ needs.prepare.outputs.release_tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release-assets/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
