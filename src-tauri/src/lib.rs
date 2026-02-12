@@ -511,7 +511,12 @@ async fn start_service_internal(app: AppHandle, shared: SharedState) -> Result<S
 
     {
         let mut inner = shared.lock();
-        inner.worker_handle = Some(handle);
+        if inner.current_state == ServiceMachineState::Running {
+            inner.worker_handle = Some(handle);
+        } else {
+            drop(inner);
+            handle.abort();
+        }
     }
 
     Ok(shared.snapshot())
