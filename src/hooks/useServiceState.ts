@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 export type ServiceStatus = "RUNNING" | "STOPPED" | "STARTING" | "STOPPING" | "ERROR";
 export type WifiStatus = "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
 export type InternetStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
-export type KickInterval = "60" | "120" | "300";
+export type KickInterval = "20" | "60" | "120" | "300";
 
 export interface LogEntry {
   id: string;
@@ -46,13 +46,14 @@ const initialState: ServiceState = {
   wifiStatus: "UNKNOWN",
   internetStatus: "UNKNOWN",
   lastKick: null,
-  kickInterval: "120",
+  kickInterval: "20",
   logs: [],
   errorMessage: null,
   backendConnected: true,
 };
 
 function toKickInterval(seconds: number): KickInterval {
+  if (seconds <= 20) return "20";
   if (seconds <= 60) return "60";
   if (seconds >= 300) return "300";
   return "120";

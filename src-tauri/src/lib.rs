@@ -14,8 +14,8 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 
-const MIN_INTERVAL_SECONDS: u64 = 60;
-const DEFAULT_INTERVAL_SECONDS: u64 = 120;
+const MIN_INTERVAL_SECONDS: u64 = 20;
+const DEFAULT_INTERVAL_SECONDS: u64 = 20;
 const CONNECT_TIMEOUT_SECONDS: u64 = 3;
 const REQUEST_TIMEOUT_SECONDS: u64 = 5;
 const MAX_LOGS: usize = 30;
@@ -238,9 +238,15 @@ fn setup_main_window(app: &AppHandle) -> tauri::Result<()> {
         let _ = position_window_bottom_right(&window);
         let window_clone = window.clone();
         window.on_window_event(move |event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window_clone.hide();
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    let _ = window_clone.hide();
+                }
+                WindowEvent::Focused(false) => {
+                    let _ = window_clone.hide();
+                }
+                _ => {}
             }
         });
     }

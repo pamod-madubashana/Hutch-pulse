@@ -8,6 +8,7 @@ interface AdvancedSettingsProps {
 }
 
 const intervalOptions: { value: KickInterval; label: string }[] = [
+  { value: "20", label: "20s" },
   { value: "60", label: "60s" },
   { value: "120", label: "120s" },
   { value: "300", label: "300s" },
@@ -62,7 +63,7 @@ export function AdvancedSettings({ kickInterval, onKickIntervalChange }: Advance
           </div>
 
           <p className="text-[10px] text-muted-foreground/70 italic">
-            Hard limit: interval never below 60s
+            Default interval: 20s
           </p>
         </div>
       )}
