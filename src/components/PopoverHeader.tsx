@@ -4,6 +4,7 @@ const statusConfig: Record<ServiceStatus, { label: string; className: string }> 
   RUNNING: { label: "RUNNING", className: "status-running" },
   STOPPED: { label: "STOPPED", className: "status-stopped" },
   STARTING: { label: "STARTING", className: "status-starting" },
+  STOPPING: { label: "STOPPING", className: "status-stopping" },
   ERROR: { label: "ERROR", className: "status-error" },
 };
 

@@ -1,6 +1,9 @@
-import { useState, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useState } from "react";
 
-export type ServiceStatus = "RUNNING" | "STOPPED" | "STARTING" | "ERROR";
+export type ServiceStatus = "RUNNING" | "STOPPED" | "STARTING" | "STOPPING" | "ERROR";
+export type WifiStatus = "CONNECTED" | "DISCONNECTED" | "UNKNOWN";
+export type InternetStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
 export type KickInterval = "60" | "120" | "300";
 
 export interface LogEntry {
@@ -9,92 +12,142 @@ export interface LogEntry {
   timestamp: Date;
 }
 
-interface ServiceState {
-  status: ServiceStatus;
-  wifiConnected: boolean;
-  internetOnline: boolean;
-  lastKick: Date | null;
-  autoRestart: boolean;
-  kickInterval: KickInterval;
-  logs: LogEntry[];
+interface BackendLogEntry {
+  id: number;
+  message: string;
+  timestampMs: number;
+}
+
+interface BackendSnapshot {
+  currentState: ServiceStatus;
+  wifiStatus: WifiStatus;
+  internetStatus: InternetStatus;
+  lastKickTimeMs: number | null;
+  intervalSeconds: number;
+  logs: BackendLogEntry[];
   errorMessage: string | null;
 }
 
+interface ServiceState {
+  status: ServiceStatus;
+  wifiStatus: WifiStatus;
+  internetStatus: InternetStatus;
+  lastKick: Date | null;
+  kickInterval: KickInterval;
+  logs: LogEntry[];
+  errorMessage: string | null;
+  backendConnected: boolean;
+}
+
+const POLL_INTERVAL_MS = 1200;
+
 const initialState: ServiceState = {
   status: "STOPPED",
-  wifiConnected: true,
-  internetOnline: true,
+  wifiStatus: "UNKNOWN",
+  internetStatus: "UNKNOWN",
   lastKick: null,
-  autoRestart: false,
   kickInterval: "120",
-  logs: [
-    { id: "1", message: "Service initialized", timestamp: new Date(Date.now() - 300000) },
-    { id: "2", message: "Wi-Fi connected", timestamp: new Date(Date.now() - 240000) },
-    { id: "3", message: "Ready to start", timestamp: new Date(Date.now() - 60000) },
-  ],
+  logs: [],
   errorMessage: null,
+  backendConnected: true,
 };
 
-let logCounter = 4;
+function toKickInterval(seconds: number): KickInterval {
+  if (seconds <= 60) return "60";
+  if (seconds >= 300) return "300";
+  return "120";
+}
+
+function mapError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 export function useServiceState() {
   const [state, setState] = useState<ServiceState>(initialState);
 
-  const addLog = useCallback((message: string) => {
+  const applySnapshot = useCallback((snapshot: BackendSnapshot) => {
     setState((prev) => ({
       ...prev,
-      logs: [
-        { id: String(logCounter++), message, timestamp: new Date() },
-        ...prev.logs,
-      ].slice(0, 50),
+      status: snapshot.currentState,
+      wifiStatus: snapshot.wifiStatus,
+      internetStatus: snapshot.internetStatus,
+      lastKick: snapshot.lastKickTimeMs ? new Date(snapshot.lastKickTimeMs) : null,
+      kickInterval: toKickInterval(snapshot.intervalSeconds),
+      logs: snapshot.logs.map((entry) => ({
+        id: String(entry.id),
+        message: entry.message,
+        timestamp: new Date(entry.timestampMs),
+      })),
+      errorMessage: snapshot.errorMessage,
+      backendConnected: true,
     }));
   }, []);
 
-  const startService = useCallback(() => {
-    if (!state.wifiConnected || !state.internetOnline) {
+  const refreshStatus = useCallback(async () => {
+    try {
+      const snapshot = await invoke<BackendSnapshot>("get_status");
+      applySnapshot(snapshot);
+    } catch {
       setState((prev) => ({
         ...prev,
-        errorMessage: !prev.wifiConnected ? "Wi-Fi is not connected" : "No internet connection",
+        backendConnected: false,
       }));
-      addLog("Start failed — no connectivity");
-      return;
     }
-    setState((prev) => ({ ...prev, status: "STARTING", errorMessage: null }));
-    addLog("Starting service…");
-    setTimeout(() => {
-      setState((prev) => ({ ...prev, status: "RUNNING", lastKick: new Date() }));
-      addLog("Service started");
-      addLog("Kick OK");
-    }, 1500);
-  }, [state.wifiConnected, state.internetOnline, addLog]);
+  }, [applySnapshot]);
 
-  const stopService = useCallback(() => {
-    setState((prev) => ({ ...prev, status: "STOPPED", errorMessage: null }));
-    addLog("Service stopped");
-  }, [addLog]);
+  useEffect(() => {
+    void refreshStatus();
+    const timer = window.setInterval(() => {
+      void refreshStatus();
+    }, POLL_INTERVAL_MS);
 
-  const kickNow = useCallback(() => {
-    if (state.status !== "RUNNING") return;
-    setState((prev) => ({ ...prev, lastKick: new Date() }));
-    addLog("Manual kick OK");
-  }, [state.status, addLog]);
+    return () => window.clearInterval(timer);
+  }, [refreshStatus]);
 
-  const setAutoRestart = useCallback((value: boolean) => {
-    setState((prev) => ({ ...prev, autoRestart: value }));
-    addLog(`Auto-restart ${value ? "enabled" : "disabled"}`);
-  }, [addLog]);
+  const startService = useCallback(async () => {
+    try {
+      const snapshot = await invoke<BackendSnapshot>("start_service");
+      applySnapshot(snapshot);
+    } catch (err) {
+      setState((prev) => ({ ...prev, errorMessage: mapError(err) }));
+    }
+  }, [applySnapshot]);
 
-  const setKickInterval = useCallback((value: KickInterval) => {
-    setState((prev) => ({ ...prev, kickInterval: value }));
-    addLog(`Kick interval set to ${value}s`);
-  }, [addLog]);
+  const stopService = useCallback(async () => {
+    try {
+      const snapshot = await invoke<BackendSnapshot>("stop_service");
+      applySnapshot(snapshot);
+    } catch (err) {
+      setState((prev) => ({ ...prev, errorMessage: mapError(err) }));
+    }
+  }, [applySnapshot]);
 
-  const clearLogs = useCallback(() => {
-    setState((prev) => ({ ...prev, logs: [] }));
-  }, []);
+  const kickNow = useCallback(async () => {
+    try {
+      const snapshot = await invoke<BackendSnapshot>("kick_now");
+      applySnapshot(snapshot);
+    } catch (err) {
+      setState((prev) => ({ ...prev, errorMessage: mapError(err) }));
+    }
+  }, [applySnapshot]);
 
-  const dismissError = useCallback(() => {
-    setState((prev) => ({ ...prev, errorMessage: null }));
+  const setKickInterval = useCallback(async (value: KickInterval) => {
+    const intervalSeconds = Number(value);
+    try {
+      const snapshot = await invoke<BackendSnapshot>("set_interval", { intervalSeconds });
+      applySnapshot(snapshot);
+    } catch (err) {
+      setState((prev) => ({ ...prev, errorMessage: mapError(err) }));
+    }
+  }, [applySnapshot]);
+
+  const quitApp = useCallback(async () => {
+    try {
+      await invoke("quit_app");
+    } catch (err) {
+      setState((prev) => ({ ...prev, errorMessage: mapError(err) }));
+    }
   }, []);
 
   return {
@@ -102,9 +155,7 @@ export function useServiceState() {
     startService,
     stopService,
     kickNow,
-    setAutoRestart,
     setKickInterval,
-    clearLogs,
-    dismissError,
+    quitApp,
   };
 }

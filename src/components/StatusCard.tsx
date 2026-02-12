@@ -1,8 +1,9 @@
 import { Wifi, WifiOff, Globe, Clock } from "lucide-react";
+import type { InternetStatus, WifiStatus } from "@/hooks/useServiceState";
 
 interface StatusCardProps {
-  wifiConnected: boolean;
-  internetOnline: boolean;
+  wifiStatus: WifiStatus;
+  internetStatus: InternetStatus;
   lastKick: Date | null;
 }
 
@@ -15,19 +16,22 @@ function timeAgo(date: Date | null): string {
   return `${Math.floor(minutes / 60)}h ago`;
 }
 
-export function StatusCard({ wifiConnected, internetOnline, lastKick }: StatusCardProps) {
+export function StatusCard({ wifiStatus, internetStatus, lastKick }: StatusCardProps) {
+  const wifiConnected = wifiStatus === "CONNECTED";
+  const internetOnline = internetStatus === "ONLINE";
+
   const rows = [
     {
       icon: wifiConnected ? Wifi : WifiOff,
       label: "Wi-Fi",
-      value: wifiConnected ? "Connected" : "Off",
-      ok: wifiConnected,
+      value: wifiStatus === "UNKNOWN" ? "Unknown" : wifiConnected ? "Connected" : "Disconnected",
+      ok: wifiConnected || wifiStatus === "UNKNOWN",
     },
     {
       icon: Globe,
       label: "Internet",
-      value: internetOnline ? "Online" : "Offline",
-      ok: internetOnline,
+      value: internetStatus === "UNKNOWN" ? "Unknown" : internetOnline ? "Online" : "Offline",
+      ok: internetOnline || internetStatus === "UNKNOWN",
     },
     {
       icon: Clock,

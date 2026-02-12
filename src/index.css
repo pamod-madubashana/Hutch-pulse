@@ -29,6 +29,7 @@
     --status-running: 142 60% 45%;
     --status-stopped: 220 10% 46%;
     --status-starting: 210 90% 56%;
+    --status-stopping: 34 90% 56%;
     --status-error: 0 72% 50%;
 
     --surface-glass: 220 14% 92% / 0.8;
@@ -73,6 +74,7 @@
     --status-running: 142 60% 50%;
     --status-stopped: 220 10% 50%;
     --status-starting: 210 90% 60%;
+    --status-stopping: 34 90% 60%;
     --status-error: 0 72% 55%;
 
     --surface-glass: 220 18% 14% / 0.7;
@@ -125,6 +127,10 @@
   .status-error {
     background-color: hsl(var(--status-error));
     box-shadow: 0 0 6px hsl(var(--status-error) / 0.5);
+  }
+  .status-stopping {
+    background-color: hsl(var(--status-stopping));
+    animation: pulse-glow 1.2s ease-in-out infinite;
   }
 }
 

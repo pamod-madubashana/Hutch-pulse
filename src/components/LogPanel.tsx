@@ -1,16 +1,15 @@
-import { Copy, Trash2 } from "lucide-react";
+import { Copy } from "lucide-react";
 import type { LogEntry } from "@/hooks/useServiceState";
 
 interface LogPanelProps {
   logs: LogEntry[];
-  onClear: () => void;
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export function LogPanel({ logs, onClear }: LogPanelProps) {
+export function LogPanel({ logs }: LogPanelProps) {
   const handleCopy = () => {
     const text = logs.map((l) => `[${formatTime(l.timestamp)}] ${l.message}`).join("\n");
     navigator.clipboard.writeText(text);
@@ -29,13 +28,6 @@ export function LogPanel({ logs, onClear }: LogPanelProps) {
             title="Copy logs"
           >
             <Copy className="w-3 h-3" />
-          </button>
-          <button
-            onClick={onClear}
-            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-            title="Clear logs"
-          >
-            <Trash2 className="w-3 h-3" />
           </button>
         </div>
       </div>

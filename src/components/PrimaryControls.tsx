@@ -1,47 +1,37 @@
 import { Play, Square, Zap } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import type { ServiceStatus } from "@/hooks/useServiceState";
 
 interface PrimaryControlsProps {
   status: ServiceStatus;
-  autoRestart: boolean;
   onStart: () => void;
   onStop: () => void;
   onKickNow: () => void;
-  onAutoRestartChange: (value: boolean) => void;
   errorMessage: string | null;
-  onDismissError: () => void;
 }
 
 export function PrimaryControls({
   status,
-  autoRestart,
   onStart,
   onStop,
   onKickNow,
-  onAutoRestartChange,
   errorMessage,
-  onDismissError,
 }: PrimaryControlsProps) {
   const isRunning = status === "RUNNING";
   const isStarting = status === "STARTING";
+  const isStopping = status === "STOPPING";
 
   return (
     <div className="mx-3 space-y-2.5">
       {errorMessage && (
-        <div className="flex items-center justify-between rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
           <span>{errorMessage}</span>
-          <button onClick={onDismissError} className="text-destructive/60 hover:text-destructive ml-2">
-            ✕
-          </button>
         </div>
       )}
 
       <div className="flex gap-2">
         <button
           onClick={isRunning ? onStop : onStart}
-          disabled={isStarting}
+          disabled={isStarting || isStopping}
           className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium transition-all duration-200 disabled:opacity-50 ${
             isRunning
               ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20"
@@ -57,6 +47,11 @@ export function PrimaryControls({
               <div className="w-3.5 h-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               Starting…
             </>
+          ) : isStopping ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              Stopping…
+            </>
           ) : (
             <>
               <Play className="w-3.5 h-3.5" /> Start Service
@@ -71,18 +66,6 @@ export function PrimaryControls({
         >
           <Zap className="w-3.5 h-3.5" /> Kick Now
         </button>
-      </div>
-
-      <div className="flex items-center justify-between rounded-lg bg-secondary/30 px-3 py-2">
-        <Label htmlFor="auto-restart" className="text-xs text-muted-foreground cursor-pointer">
-          Auto-restart on reconnect
-        </Label>
-        <Switch
-          id="auto-restart"
-          checked={autoRestart}
-          onCheckedChange={onAutoRestartChange}
-          className="scale-75 origin-right"
-        />
       </div>
     </div>
   );

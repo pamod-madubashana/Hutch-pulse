@@ -18,20 +18,17 @@ const Index = () => {
 
         <div className="flex-1 flex flex-col gap-3 py-3 overflow-hidden">
           <StatusCard
-            wifiConnected={service.wifiConnected}
-            internetOnline={service.internetOnline}
+            wifiStatus={service.wifiStatus}
+            internetStatus={service.internetStatus}
             lastKick={service.lastKick}
           />
 
           <PrimaryControls
             status={service.status}
-            autoRestart={service.autoRestart}
             onStart={service.startService}
             onStop={service.stopService}
             onKickNow={service.kickNow}
-            onAutoRestartChange={service.setAutoRestart}
             errorMessage={service.errorMessage}
-            onDismissError={service.dismissError}
           />
 
           <AdvancedSettings
@@ -39,10 +36,16 @@ const Index = () => {
             onKickIntervalChange={service.setKickInterval}
           />
 
-          <LogPanel logs={service.logs} onClear={service.clearLogs} />
+          {!service.backendConnected && (
+            <p className="mx-3 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-[10px] text-destructive">
+              Backend unavailable. Run this UI with Tauri desktop runtime.
+            </p>
+          )}
+
+          <LogPanel logs={service.logs} />
         </div>
 
-        <PopoverFooter version="v1.0.0" />
+        <PopoverFooter version="v1.0.0" onQuit={service.quitApp} />
       </div>
     </div>
   );
