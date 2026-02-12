@@ -5,22 +5,63 @@
 <p>HutchKick is a lightweight Windows tray app that starts or stops a background service to "kick" your Hutch self-care page, while automatically pausing when Wi-Fi or internet drops. 📶⚡</p>
 </div>
 
-## Features
-
-- **System Tray Integration**: Runs quietly in the system tray with quick access menu
-- **Auto-Pause**: Automatically stops kicking when Wi-Fi or internet connection is lost
-- **Always-On-Top Window**: Small popover window that stays on top for quick access
-- **Kick Interval**: Configurable kick interval (default: 20 seconds)
-- **Manual Kick**: Option to manually trigger a kick at any time
-- **Real-time Status**: View Wi-Fi status, internet connectivity, and last kick time
-- **Activity Logs**: Track all service activities and events
-
 ## Tech Stack
 
-- **Frontend**: React + TypeScript + Vite
-- **UI Components**: shadcn/ui + Tailwind CSS
-- **Backend**: Tauri (Rust)
-- **State Management**: React Query
+- Frontend: React + TypeScript + Vite
+- UI Components: shadcn/ui + Tailwind CSS
+- Backend: Tauri (Rust)
+- State Management: React Query
+
+## Why This Project Exists
+
+- Problem: Internet speed intermittently drops despite stable signal strength, impacting day-to-day browsing and app usage.
+- Goal: Improve connection performance by periodically triggering a lightweight request to the Hutch Selfcare page to simulate an active session and keep the network state responsive.
+- Outcome: A small Windows tray utility that can start/stop the booster service and automatically pauses when Wi-Fi or internet connectivity is lost, keeping behavior predictable and low-noise.
+
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── ui/              # shadcn/ui components
+│   ├── AdvancedSettings.tsx
+│   ├── LogPanel.tsx
+│   ├── NavLink.tsx
+│   ├── PopoverFooter.tsx
+│   ├── PopoverHeader.tsx
+│   ├── PrimaryControls.tsx
+│   └── StatusCard.tsx
+├── hooks/
+│   └── useServiceState.ts
+├── pages/
+│   ├── Index.tsx
+│   └── NotFound.tsx
+├── App.tsx
+├── main.tsx
+└── index.css
+src-tauri/
+├── src/
+│   ├── lib.rs
+│   └── main.rs
+├── Cargo.toml
+├── tauri.conf.json
+└── icons/
+```
+
+## Screenshots
+
+Screenshots will be added soon.
+
+## Key Features
+
+- Runs in the system tray with quick access menu
+- Automatically stops when Wi-Fi or internet is lost
+- Always-on-top popover window for quick access
+- Configurable kick interval (default: 20 seconds)
+- Manual kick trigger at any time
+- Real-time Wi-Fi and internet status display
+- Activity logging for tracking service events
 
 ## Getting Started
 
