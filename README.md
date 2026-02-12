@@ -37,7 +37,7 @@
 git clone https://github.com/pamod-madubashana/Hutch-Kick.git
 
 # Navigate to project directory
-cd Hutch-Pulse
+cd Hutch-Kick
 
 # Install dependencies
 npm install
